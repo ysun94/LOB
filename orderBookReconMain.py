@@ -21,10 +21,9 @@ LimitOrder('1011', 38, 'D', 18, 0, 11142),
 LimitOrder('1014', 54, 'Q', 19, 1, 9442),
 LimitOrder('1000', 68, 'S', 20, 1, 9287)]
 
-#orders2 = [LimitOrder('1019', 62, 'L', 1, 1, 10702)]
 
 book = OrderBook()
-#print('start')
+
 index = 0
 for order in orders:
     book.add( order )
@@ -50,4 +49,3 @@ for order in orders:
     else:
         print('Ask is empty.')
 
-print(book.bids)
