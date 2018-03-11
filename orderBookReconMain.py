@@ -26,26 +26,24 @@ book = OrderBook()
 
 index = 0
 for order in orders:
+    print('---------------------------')
+    print('Event [' + str(index) + ']: ')
     book.add( order )
-
     print('---------------------------')
-    print('Event [' + str(index) + ']')
     index += 1
-    print('---------------------------')
 
     print('Bid (Buy-side) priority queue:')
     if ( book.bids ):
-        for i in range( len( book.bids) ):
-            print(book.bids[0])
-            book.bids.pop()
+        for i in book.bids:
+            print(i)
     else:
         print('Bid is empty.')
 
     print('Ask (Sell-side) priority queue:')
     if ( book.asks ):
-        for i in range( len( book.asks) ):
-            print(book.asks[0])
-            book.asks.pop()
+        for i in book.asks:
+            print(i)
     else:
         print('Ask is empty.')
 
+    print('\n')
