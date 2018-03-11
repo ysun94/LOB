@@ -47,3 +47,5 @@ for order in orders:
         print('Ask is empty.')
 
     print('\n')
+
+    
