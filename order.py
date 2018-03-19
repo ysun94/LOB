@@ -1,5 +1,6 @@
 from enum import Enum
 import heapq
+import copy
 
 class Direction(Enum):
     buy = 0
@@ -64,11 +65,33 @@ class LimitOrder(Order):
     def set_quantity(self, value):
         self.quantity = value
 
+    def get_price(self):
+        return self.price
+
+class PriorityQueue(object):
+    def __init__(self):
+        self.heap = []
+
+    def push(self, lo):
+        heapq.heappush(self.heap, lo)
+
+    def pop(self):
+        heapq.heappop(self.heap)
+
+    def empty(self):
+        if (not self.heap):
+            return True
+        else:
+            return False
+
+    def top(self):
+        if(not self.empty()):
+            return self.heap[0]
 
 class OrderBook(object):
     def __init__(self):
-        self.bids = [] # empty list
-        self.asks = [] # empty list
+        self.bids = PriorityQueue()
+        self.asks = PriorityQueue()
         # you use these lists to create priority queues.
         # you need priority queues to access to the top element in O(1)
         self.order_index = dict()
@@ -85,10 +108,12 @@ class OrderBook(object):
                ")" % \
                 (lo.order_id, lo.quantity, lo.broker, lo.price)
 )
-            heapq.heappush(self.bids, lo)
+            self.bids.push(lo)
+            # heapq.heappush(self.bids, lo)
             self.order_index[ lo.order_id ] = lo
         else:
-            heapq.heappush(self.asks, lo)
+            self.asks.push(lo)
+            # heapq.heappush(self.asks, lo)
             print("A new ask is added. "
                   "(" \
                "order_id: %s, quantity: %d, " \
@@ -96,34 +121,97 @@ class OrderBook(object):
                ")" % \
                 (lo.order_id, lo.quantity, lo.broker, lo.price))
             self.order_index[ lo.order_id ] = lo
-        if self.asks and self.bids:
-            self.__match()
+        self.__match()
 
     def __match(self):
-        best_bid = self.bids[0]
-        best_ask = self.asks[0]
-        if best_bid.price >= best_ask.price:
-            if best_bid.quantity > best_ask.quantity:
-                remain = best_bid.quantity - best_ask.quantity
-                print('A bid (ID: %s) and an ask (ID: %s) are matched. '
-                      'The ask (ID: %s) is filled with the quantity %d.' \
-                      % (best_bid.order_id, best_ask.order_id, best_ask.order_id, best_ask.quantity))
-                self.bids[0].set_quantity(remain)
-                heapq.heappop(self.asks)
-                self.__match()
+        if (not self.asks.empty()) and (not self.bids.empty()):
+            best_bid = self.bids.top()
+            best_ask = self.asks.top()
+            if best_bid.price >= best_ask.price:
+                if best_bid.quantity > best_ask.quantity:
+                    remains = best_bid.quantity - best_ask.quantity
+                    print('A bid (ID: %s) and an ask (ID: %s) are matched. '
+                          'The ask (ID: %s) is filled with the quantity %d.' \
+                          % (best_bid.order_id, best_ask.order_id, best_ask.order_id, best_ask.quantity))
+                    self.bids.top().set_quantity(remains)
+                    self.order_index[best_ask.order_id] = 'Deleted'
+                    self.asks.pop()
+                    # heapq.heappop(self.asks)
+                    self.__match()
 
-            elif best_bid.quantity < best_ask.quantity:
-                remain = best_ask.quantity - best_bid.quantity
-                print('A bid (ID: %s) and an ask (ID: %s) are matched. '
-                      'The bid (ID: %s) is filled with the quantity %d.' \
-                      % (best_bid.order_id, best_ask.order_id, best_bid.order_id, best_bid.quantity))
-                self.asks[0].set_quantity(remain)
-                heapq.heappop(self.bids)
-                self.__match()
+                elif best_bid.quantity < best_ask.quantity:
+                    remains = best_ask.quantity - best_bid.quantity
+                    print('A bid (ID: %s) and an ask (ID: %s) are matched. '
+                          'The bid (ID: %s) is filled with the quantity %d.' \
+                          % (best_bid.order_id, best_ask.order_id, best_bid.order_id, best_bid.quantity))
+                    self.asks.top().set_quantity(remains)
+                    self.order_index[best_bid.order_id] = 'Deleted'
+                    self.bids.pop()
+                    # heapq.heappop(self.bids)
+                    self.__match()
 
-            else:
-                print('A bid (ID: %s) and an ask (ID: %s) are matched. '
-                      'Both are filled with the quantity %d.' \
-                      % (best_bid.order_id, best_ask.order_id, best_ask.quantity))
-                heapq.heappop(self.bids)
-                heapq.heappop(self.asks)
+                else:
+                    print('A bid (ID: %s) and an ask (ID: %s) are matched. '
+                          'Both are filled with the quantity %d.' \
+                          % (best_bid.order_id, best_ask.order_id, best_ask.quantity))
+                    self.order_index[best_ask.order_id] = 'Deleted'
+                    self.order_index[best_bid.order_id] = 'Deleted'
+                    self.asks.pop()
+                    self.bids.pop()
+                    # heapq.heappop(self.bids)
+                    # heapq.heappop(self.asks)
+
+    def spread(self):
+        if (not self.bids.empty() and not self.asks.empty()):
+            # Spread is always non-negative
+            assert self.asks.top().get_price() - self.bids.top().get_price() >= 0
+            return self.asks.top().get_price() - self.bids.top().get_price()
+
+    def mid_price(self):
+        if( not self.bids.empty() and not self.asks.empty() ):
+            return (self.asks.top().get_price() + self.bids.top().get_price())/2.0
+
+    def micro_price(self):
+        # Volume Weighted Average Price
+        if( not self.bids.empty() and not self.asks.empty() ):
+            best_ask_price  = self.asks.top().get_price()
+            best_ask_volume = self.asks.top().get_quantity()
+            best_bid_price  = self.bids.top().get_price()
+            best_bid_volume = self.bids.top().get_quantity()
+            return ( best_bid_volume/(best_ask_volume + best_bid_volume) )*best_ask_price \
+                   + ( best_ask_volume/(best_ask_volume + best_bid_volume) )*best_bid_price
+
+    def info(self, order_id):
+        if order_id in self.order_index:
+            return self.order_index[order_id]
+        # Otherwise return None.
+
+    def show_state(self):
+        print("\n")
+        print("Buy-side (Bid) priority queue:")
+        temp = copy.deepcopy(self.bids)
+        # Otherwise, it will reference to the same object
+        # and 'temp.pop()' will also pop the element in 'self.bids'
+        while (not temp.empty()):
+            print(temp.top())
+            temp.pop()
+        print("\n")
+
+        print("Sell-side (Ask) priority queue:")
+        temp = copy.deepcopy(self.asks)
+        while (not temp.empty()):
+            print(temp.top())
+            temp.pop()
+        print("\n")
+
+        print("Order Book statistics:")
+        print( "Spread:      " + str(self.spread())      + " £")
+        print( "Mid price:   " + str(self.mid_price())   + " £")
+        print( "Micro price: " + str(self.micro_price()) + " £")
+        print("\n")
+
+        print("Current Status: ")
+        for i in self.order_index:
+            print("ID:", i,"-", self.order_index[i])
+        print('\n')
+
