@@ -1,4 +1,5 @@
 from order import LimitOrder, OrderBook
+import heapq
 
 orders = [LimitOrder('1019', 62, 'L', 1, 1, 10702),
 LimitOrder('1006', 8, 'R',1, 1, 10665),
@@ -32,20 +33,23 @@ for order in orders:
     print('---------------------------')
     index += 1
 
-    print('Bid (Buy-side) priority queue:')
-    if ( book.bids ):
-        for i in book.bids:
-            print(i)
-    else:
-        print('Bid is empty.')
+    book.show_state()
+    #
+    # print('Bid (Buy-side) priority queue:')
+    # if ( book.bids ):
+    #     temp1 = book.bids.heap[:]
+    #     for i in range(len(book.bids.heap)):
+    #         print(heapq.heappop(temp1))
+    # else:
+    #     print('Bid is empty.')
+    #
+    # print('Ask (Sell-side) priority queue:')
+    # if ( book.asks ):
+    #     temp2 = book.asks.heap[:]
+    #     for i in range(len(book.asks.heap)):
+    #         print(heapq.heappop(temp2))
+    # else:
+    #     print('Ask is empty.')
+    #
+    # print('\n')
 
-    print('Ask (Sell-side) priority queue:')
-    if ( book.asks ):
-        for i in book.asks:
-            print(i)
-    else:
-        print('Ask is empty.')
-
-    print('\n')
-
-    
